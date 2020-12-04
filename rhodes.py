@@ -6,6 +6,7 @@ import os
 import time
 import pandas as pd
 import pickle
+import urllib3
 
 # email stuff
 from email.mime.multipart import MIMEMultipart
@@ -73,9 +74,7 @@ def search_loop(states=None, locs=None, query='rhodes piano', category='msa', po
     if len(new) > 0:
         ret = pd.DataFrame([data[r] for r in new]).set_index('id')
     
-    update_saved_dictionary(data, path)
-    del data
-    return ret
+    return ret, data, path
 
 def send_email(df, server):
     me = "bobisloaded@gmail.com"
@@ -106,7 +105,7 @@ def setup_email_server(port, gmail_uname):
 def search_header(i, st):
     return 'SEARCH {} :: {}'.format(i, datetime.datetime.fromtimestamp(st).strftime('%m/%d/%Y, %H:%M:%S EST :'))
 
-def main(port=465, uname='bobisloaded', wait_time=900):
+def main(port=465, uname='bobisloaded', wait_time=3600):
 
     port, myemail, password, context = setup_email_server(port, uname)
     with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
@@ -114,20 +113,25 @@ def main(port=465, uname='bobisloaded', wait_time=900):
         sleep_time = -1
         i = 1
         while(True):
-            if sleep_time > 0:
-                time.sleep(sleep_time)            
-            start_time = time.time()
+            try:
+                if sleep_time > 0:
+                    time.sleep(sleep_time)            
+                start_time = time.time()
 
-            new = search_loop(
-                ['Michigan', 'Wisconsin', 'Indiana', 'Missouri', 'Illinois', 'Pennsylvania', 'Ohio', 'Kentucky', 'West Virginia'],
-                header=search_header(i, start_time)
-            ) 
-            if new is not None:
-                send_email(new, server)
-            del new
-            end_time = time.time()
-            sleep_time = wait_time - (end_time - start_time)
-            i += 1
+                new, data, path = search_loop(
+                    ['Michigan', 'Wisconsin', 'Indiana', 'Missouri', 'Illinois', 'Pennsylvania', 'Ohio', 'Kentucky', 'West Virginia'],
+                    header=search_header(i, start_time)
+                ) 
+                if new is not None:
+                    send_email(new, server)
+                    update_saved_dictionary(data, path)
+                del data
+                del new
+                end_time = time.time()
+                sleep_time = wait_time - (end_time - start_time)
+                i += 1
+            except urllib3.exceptions.ProtocolError:
+                print('FAILED, retrying')
 
 if __name__ == '__main__':
     main()
