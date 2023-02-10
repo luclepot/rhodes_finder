@@ -21,7 +21,7 @@ LOCATIONS = {
 }
 
 THIS_PATH = pathlib.Path(__file__).parent.absolute()
-DATA_PATH = '{}/data/results.pickle'.format(THIS_PATH)
+DATA_PATH = '{}/data/results_skis.pickle'.format(THIS_PATH)
 
 def get_locs(states=None, locs=None):
     if states is None and locs is None:
@@ -39,10 +39,7 @@ def search_for_rhodes(states=None, locs=None, query='rhodes', category='msa', po
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")        
         for loc in tqdm.tqdm(locs, desc=header):
-            try:
-                res += list(cl(loc, filters={'query': query, 'posted_today': posted_today},category=category).get_results())
-            except AttributeError:
-                continue
+            res += list(cl(loc, filters={'query': query, 'posted_today': posted_today}, category=category).get_results())    
     return res
 
 def update_local_dictionary(d, search):
@@ -83,7 +80,7 @@ def send_email(df, server):
     me = "bobisloaded@gmail.com"
     you = "luclepot@berkeley.edu"
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = "{} new rhodes found".format(len(df))
+    msg['Subject'] = "{} new skis found".format(len(df))
     msg['From'] = me
     msg['To'] = you
 
@@ -123,9 +120,9 @@ def main(port=465, uname='bobisloaded', wait_time=3600):
 
                 new, data, path = search_loop(
                     ['California', 'Oregon', 'Michigan',
-                    'Nevada', 'Arizona', 'Utah', 'Idaho', 'Washington', 'Montana'],
-                    header=search_header(i, start_time)
-                ) 
+                    'Nevada', 'Arizona', 'Utah', 'Idaho', 'Washington'],
+                    header=search_header(i, start_time), query='shift binding skis'
+                )
                 if new is not None:
                     send_email(new, server)
                     update_saved_dictionary(data, path)
